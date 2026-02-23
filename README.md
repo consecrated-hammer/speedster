@@ -1,29 +1,42 @@
-# Speedster
+## Speedster
 
-A lightweight WoW Classic Anniversary addon that auto-generates a class-based movement speed macro and supports quick keybinding.
+Speedster is a lightweight World of Warcraft Classic Anniversary addon that generates a class-aware movement speed macro and binds it to a key through a simple options panel.
 
-## Development Workflow
+Inspired by the design ideas behind MountsJournal.
 
-1. Edit addon code in `Interface/AddOns/Speedster` during playtesting.
-2. Sync changes into this repo folder.
-3. Commit changes.
-4. Build zip for release.
-5. Tag release and push.
+## What It Does
 
-## Local Commands
+- Builds a dynamic movement macro based on your class and known spells.
+- Updates automatically when you learn new relevant spells/forms.
+- Lets you bind your preferred key from the options panel ("press next key/button" capture).
+- Shows your currently generated macro in the options panel.
 
-### Sync from game AddOns folder
-```powershell
-Copy-Item -Path "D:\stuff\games\battlenet\World of Warcraft\_anniversary_\Interface\AddOns\Speedster\*" -Destination ".\" -Recurse -Force
-```
+## Supported Class Speed Abilities
 
-### Build release zip
-```powershell
-powershell -ExecutionPolicy Bypass -File "D:\stuff\games\MyAddons\Update-SpeedsterZip.ps1" -UseVersionFromToc
-```
+- Druid: Cat Form, Aquatic Form, Travel/Flight Form logic (when known)
+- Shaman: Ghost Wolf
+- Hunter: Aspect of the Cheetah
+- Rogue: Sprint
+- Mage: Blink
 
-## Slash Commands
+If your class has no supported speed spell available yet, the generated macro will be empty until one is learned.
 
-- `/speedster`
-- `/speedsterbind [KEY]`
-- `/speedstermacro`
+## Usage
+
+1. Open options:
+   - `/speedster`
+2. Bind a key:
+   - Click **Bind Key**, then press the key/button you want.
+   - Or use `/speedsterbind [KEY]` (empty value defaults to `NUMPADMINUS`).
+3. Inspect generated macro text:
+   - `/speedstermacro`
+
+## Commands
+
+- `/speedster` - Open Speedster options
+- `/speedsterbind [KEY]` - Bind speed macro to a key
+- `/speedstermacro` - Print current generated macro
+
+## Notes
+
+- Macro updates automatically on spell changes.
