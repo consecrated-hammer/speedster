@@ -10,3 +10,5 @@ Thumbs.db
 # Lua bytecode / temp
 *.luac
 *.tmp
+# Local packaging scripts
+Build-CurseForgeZip.local.ps1
