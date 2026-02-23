@@ -1,0 +1,12 @@
+# Archives
+*.zip
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Lua bytecode / temp
+*.luac
+*.tmp
