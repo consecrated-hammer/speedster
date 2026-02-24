@@ -98,6 +98,8 @@ local function refreshPanel()
 	if not SpeedsterDB then return end
 
 	panel.enable:SetChecked(not not SpeedsterDB.enabled)
+	panel.showMinimapButton:SetChecked(not not SpeedsterDB.show_minimap_button)
+	panel.showFloatingButton:SetChecked(not not SpeedsterDB.show_floating_button)
 	panel.druidTravel:SetChecked(not not SpeedsterDB.druid_use_travel)
 
 	local _, classFile = UnitClass("player")
@@ -152,9 +154,42 @@ local function ensureBuilt()
 		ns.refreshSpeedButton()
 	end)
 
+	panel.showMinimapButton = createCheckButton(panel)
+	panel.showMinimapButton:SetPoint("TOPLEFT", panel.druidTravel, "BOTTOMLEFT", 0, -8)
+	panel.showMinimapButton.Text:SetText("Show minimap button")
+	panel.showMinimapButton:SetScript("OnClick", function(btn)
+		SpeedsterDB.show_minimap_button = btn:GetChecked() and true or false
+		ns.refreshSpeedButton()
+	end)
+
+	panel.showFloatingButton = createCheckButton(panel)
+	panel.showFloatingButton:SetPoint("TOPLEFT", panel.showMinimapButton, "BOTTOMLEFT", 0, -8)
+	panel.showFloatingButton.Text:SetText("Show floating on-screen button")
+	panel.showFloatingButton:SetScript("OnClick", function(btn)
+		SpeedsterDB.show_floating_button = btn:GetChecked() and true or false
+		ns.refreshSpeedButton()
+	end)
+
+	panel.resetFloatingPosButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	panel.resetFloatingPosButton:SetSize(220, 22)
+	panel.resetFloatingPosButton:SetPoint("TOPLEFT", panel.showFloatingButton, "BOTTOMLEFT", 2, -10)
+	panel.resetFloatingPosButton:SetText("Reset Floating Button Position")
+	panel.resetFloatingPosButton:SetScript("OnClick", function()
+		if not ns.resetFloatingButtonPosition then
+			print("Speedster: floating button is not ready yet.")
+			return
+		end
+		local ok, reason = ns.resetFloatingButtonPosition()
+		if ok then
+			print("Speedster: floating button position reset.")
+		elseif reason then
+			print("Speedster: "..reason)
+		end
+	end)
+
 	panel.bindButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.bindButton:SetSize(220, 22)
-	panel.bindButton:SetPoint("TOPLEFT", panel.druidTravel, "BOTTOMLEFT", 2, -14)
+	panel.bindButton:SetPoint("TOPLEFT", panel.resetFloatingPosButton, "BOTTOMLEFT", 0, -10)
 	panel.bindButton:SetText("Bind Key")
 	panel.bindButton:SetScript("OnClick", function()
 		if waitingForBind then
