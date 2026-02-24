@@ -1,6 +1,6 @@
 ## Interface: 20505, 11508
 ## Title: Speedster
-## Author: sfmict, reborn fork
+## Author: consecratedhammer
 ## Version: v0.2.0
 ## IconTexture: Interface\AddOns\Speedster\textures\Speedster
 ## Notes: Simple movement speed macro helper.

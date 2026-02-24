@@ -12,3 +12,6 @@ Thumbs.db
 *.tmp
 # Local packaging scripts
 Build-CurseForgeZip.local.ps1
+
+# Local roadmap
+ROADMAP.local.md

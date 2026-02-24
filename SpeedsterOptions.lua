@@ -134,7 +134,7 @@ local function ensureBuilt()
 	subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
 	subtitle:SetPoint("RIGHT", panel.logo, "LEFT", -10, 0)
 	subtitle:SetJustifyH("LEFT")
-	subtitle:SetText("Simple speed macro helper. No mount journal features are loaded.")
+	subtitle:SetText("Simple speed macro helper.")
 
 	panel.enable = createCheckButton(panel)
 	panel.enable:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", -2, -18)

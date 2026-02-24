@@ -2,7 +2,7 @@
 
 Speedster is a lightweight World of Warcraft Classic Anniversary addon that generates a class-aware movement speed macro and binds it to a key through a simple options panel.
 
-Inspired by the design ideas behind MountsJournal.
+Originally inspired by MountsJournal, which unfortunately isn't available for TBC Anniversary.
 
 ## What It Does
 
