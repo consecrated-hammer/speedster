@@ -15,6 +15,148 @@ local MINIMAP_RADIUS = 80
 local FLOATING_BUTTON_SIZE = 36
 local ICON_PATH = "Interface\\AddOns\\Speedster\\textures\\Speedster.png"
 local FALLBACK_ICON_PATH = "Interface\\Icons\\INV_Misc_QuestionMark"
+local taxiSecureOverlays = {}
+local warnedTaxiCancelFailure
+
+local function cancelShapeshiftForTaxi()
+	if not (db and db.cancel_form_on_taxi) then return end
+	if InCombatLockdown and InCombatLockdown() then return end
+
+	if CancelShapeshiftForm then
+		local ok, err = pcall(CancelShapeshiftForm)
+		if not ok and not warnedTaxiCancelFailure then
+			warnedTaxiCancelFailure = true
+			print(("Speedster: taxi auto-cancel failed (%s)."):format(tostring(err)))
+		end
+	end
+	if CancelForm then
+		local ok, err = pcall(CancelForm)
+		if not ok and not warnedTaxiCancelFailure then
+			warnedTaxiCancelFailure = true
+			print(("Speedster: taxi auto-cancel failed (%s)."):format(tostring(err)))
+		end
+	end
+end
+
+local function ensureTaxiSecureOverlay(targetButton)
+	if not targetButton then return end
+	local buttonName = targetButton:GetName()
+	if not buttonName then return end
+
+	local overlay = taxiSecureOverlays[targetButton]
+	if not overlay then
+		overlay = CreateFrame("Button", buttonName.."_SpeedsterTaxiOverlay", UIParent, "SecureActionButtonTemplate")
+		overlay:RegisterForClicks("AnyUp", "AnyDown")
+		overlay:EnableMouse(true)
+		overlay:SetFrameLevel(1000)
+		overlay:SetScript("OnEnter", function()
+			local onEnter = targetButton:GetScript("OnEnter")
+			if onEnter then
+				onEnter(targetButton)
+			end
+		end)
+		overlay:SetScript("OnLeave", function()
+			local onLeave = targetButton:GetScript("OnLeave")
+			if onLeave then
+				onLeave(targetButton)
+			end
+		end)
+		taxiSecureOverlays[targetButton] = overlay
+	end
+
+	overlay:SetAttribute("type", "macro")
+	overlay:SetAttribute("macrotext", "/stand\n/dismount\n/cancelform\n/click "..buttonName)
+	overlay:SetParent(UIParent)
+	overlay:ClearAllPoints()
+	overlay:SetFrameStrata("TOOLTIP")
+
+	if targetButton:IsVisible() then
+		local bW, bH = targetButton:GetSize()
+		local uiScale = UIParent:GetEffectiveScale()
+		local btnScale = targetButton:GetEffectiveScale()
+		if uiScale and uiScale > 0 and btnScale and btnScale > 0 then
+			overlay:SetSize(
+				math.max(16, (bW or 0) * (btnScale / uiScale)),
+				math.max(16, (bH or 0) * (btnScale / uiScale))
+			)
+
+			local positioned
+			if buttonName:find("^TaxiButton") and TaxiRouteMap and TaxiNodePosition and targetButton.GetID then
+				local nodeID = targetButton:GetID()
+				if nodeID then
+					local tx, ty = TaxiNodePosition(nodeID)
+					local mapW, mapH = 316, 352
+					if tx and ty then
+						overlay:SetPoint("CENTER", TaxiRouteMap, "TOPLEFT", tx * mapW, -(ty * mapH))
+						positioned = true
+					end
+				end
+			end
+
+			if not positioned and TaxiRouteMap and targetButton:IsObjectType("Button") and buttonName:find("^TaxiButton") then
+				local left, top = TaxiRouteMap:GetLeft(), TaxiRouteMap:GetTop()
+				local mapScale = TaxiRouteMap:GetEffectiveScale()
+				local cX, cY = targetButton:GetCenter()
+				if left and top and mapScale and cX and cY then
+					local x = ((cX * btnScale) / uiScale)
+					local y = ((cY * btnScale) / uiScale)
+					overlay:SetPoint("CENTER", UIParent, "BOTTOMLEFT", x, y)
+					positioned = true
+				end
+			end
+
+			if not positioned then
+				local cX, cY = targetButton:GetCenter()
+				if cX and cY then
+					overlay:SetPoint("CENTER", UIParent, "BOTTOMLEFT", (cX * btnScale) / uiScale, (cY * btnScale) / uiScale)
+					positioned = true
+				end
+			end
+
+			if positioned then
+				overlay:Show()
+			else
+				overlay:Hide()
+			end
+		end
+	else
+		overlay:Hide()
+	end
+end
+
+local function refreshTaxiSecureOverlays()
+	for targetButton, _ in pairs(taxiSecureOverlays) do
+		if targetButton and targetButton.GetName then
+			ensureTaxiSecureOverlay(targetButton)
+		end
+	end
+end
+
+local function setupTaxiSecureOverlays()
+	if not (db and db.cancel_form_on_taxi) then return end
+	if InCombatLockdown and InCombatLockdown() then return end
+
+	for i = 1, 64 do
+		ensureTaxiSecureOverlay(_G["TaxiButton"..i])
+	end
+	for i = 1, 32 do
+		ensureTaxiSecureOverlay(_G["GossipTitleButton"..i])
+	end
+
+	if C_Timer and C_Timer.After then
+		C_Timer.After(0, refreshTaxiSecureOverlays)
+		C_Timer.After(0.1, refreshTaxiSecureOverlays)
+		C_Timer.After(0.5, refreshTaxiSecureOverlays)
+	end
+end
+
+local function hideTaxiSecureOverlays()
+	for _, overlay in pairs(taxiSecureOverlays) do
+		if overlay and overlay.Hide then
+			overlay:Hide()
+		end
+	end
+end
 
 local function trim(text)
 	if type(text) ~= "string" then return "" end
@@ -71,7 +213,7 @@ local function buildMacro()
 	end
 
 	if classFile == "SHAMAN" then
-		local ghostWolf = getSpellNameIfKnown(2645)
+		local ghostWolf = db.shaman_use_ghost_wolf and getSpellNameIfKnown(2645) or nil
 		if ghostWolf then return "/cast !"..ghostWolf end
 	elseif classFile == "HUNTER" then
 		local cheetah = getSpellNameIfKnown(5118)
@@ -388,8 +530,10 @@ core:SetScript("OnEvent", function(_, event, ...)
 		SpeedsterDB = SpeedsterDB or {
 			enabled = true,
 			druid_use_travel = true,
+			shaman_use_ghost_wolf = true,
 			show_minimap_button = true,
 			show_floating_button = true,
+			cancel_form_on_taxi = true,
 		}
 		db = SpeedsterDB
 		if db.show_minimap_button == nil then
@@ -400,6 +544,12 @@ core:SetScript("OnEvent", function(_, event, ...)
 		end
 		if db.minimap_angle == nil then
 			db.minimap_angle = 225
+		end
+		if db.cancel_form_on_taxi == nil then
+			db.cancel_form_on_taxi = true
+		end
+		if db.shaman_use_ghost_wolf == nil then
+			db.shaman_use_ghost_wolf = true
 		end
 
 		speedButton = CreateFrame("Button", buttonName, UIParent, "SecureActionButtonTemplate")
@@ -422,6 +572,26 @@ core:SetScript("OnEvent", function(_, event, ...)
 		if pendingRefresh then
 			ns.refreshSpeedButton()
 		end
+	elseif event == "TAXIMAP_OPENED"
+	or event == "TAXI_SHOW"
+	or event == "GOSSIP_SHOW" then
+		setupTaxiSecureOverlays()
+		cancelShapeshiftForTaxi()
+		if C_Timer and C_Timer.After then
+			C_Timer.After(0, cancelShapeshiftForTaxi)
+		end
+	elseif event == "TAXIMAP_CLOSED"
+	or event == "GOSSIP_CLOSED" then
+		hideTaxiSecureOverlays()
+	elseif event == "UI_ERROR_MESSAGE" then
+		local arg1, arg2 = ...
+		if arg1 == ERR_TAXIPLAYERSHAPESHIFTED or arg2 == ERR_TAXIPLAYERSHAPESHIFTED then
+			cancelShapeshiftForTaxi()
+			if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.editBox and ChatEdit_SendText then
+				DEFAULT_CHAT_FRAME.editBox:SetText("/cancelform")
+				pcall(ChatEdit_SendText, DEFAULT_CHAT_FRAME.editBox, 0)
+			end
+		end
 	elseif event == "SPELLS_CHANGED"
 	or event == "LEARNED_SPELL_IN_TAB"
 	or event == "LEARNED_SPELL_IN_SPELLBOOK" then
@@ -432,6 +602,12 @@ end)
 core:RegisterEvent("ADDON_LOADED")
 core:RegisterEvent("PLAYER_REGEN_ENABLED")
 core:RegisterEvent("SPELLS_CHANGED")
+core:RegisterEvent("TAXIMAP_OPENED")
+pcall(core.RegisterEvent, core, "TAXI_SHOW")
+pcall(core.RegisterEvent, core, "TAXIMAP_CLOSED")
+pcall(core.RegisterEvent, core, "GOSSIP_SHOW")
+pcall(core.RegisterEvent, core, "GOSSIP_CLOSED")
+pcall(core.RegisterEvent, core, "UI_ERROR_MESSAGE")
 for _, eventName in ipairs({
 	"LEARNED_SPELL_IN_TAB",
 	"LEARNED_SPELL_IN_SPELLBOOK",

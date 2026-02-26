@@ -93,6 +93,84 @@ local function createCheckButton(parent)
 	return btn
 end
 
+local function isSpellKnownSafe(spellID)
+	if C_SpellBook and C_SpellBook.IsSpellKnown then
+		local bank = Enum and Enum.SpellBookSpellBank and Enum.SpellBookSpellBank.Player or 0
+		return C_SpellBook.IsSpellKnown(spellID, bank)
+	end
+	if IsSpellKnown then
+		return IsSpellKnown(spellID)
+	end
+	if IsPlayerSpell then
+		return IsPlayerSpell(spellID)
+	end
+	return false
+end
+
+local function hookHintTooltip(control)
+	local function showHint(owner)
+		if not control._speedsterHint then return end
+		GameTooltip:SetOwner(owner, "ANCHOR_RIGHT")
+		GameTooltip:SetText(control._speedsterHint, 1, 1, 1, 1, true)
+		GameTooltip:Show()
+	end
+	local function hideHint(owner)
+		if GameTooltip and GameTooltip:IsOwned(owner) then
+			GameTooltip:Hide()
+		end
+	end
+
+	control:HookScript("OnEnter", function(self)
+		showHint(self)
+	end)
+	control:HookScript("OnLeave", function(self)
+		hideHint(self)
+	end)
+
+	if not control._speedsterHintHotspot then
+		local hotspot = CreateFrame("Frame", nil, control)
+		hotspot:ClearAllPoints()
+		hotspot:SetPoint("TOPLEFT", control, "TOPLEFT", 0, 0)
+		if control.Text then
+			hotspot:SetPoint("BOTTOMRIGHT", control.Text, "BOTTOMRIGHT", 2, 0)
+		else
+			hotspot:SetPoint("BOTTOMRIGHT", control, "BOTTOMRIGHT", 0, 0)
+		end
+		hotspot:EnableMouse(false)
+		hotspot:Hide()
+		hotspot:SetFrameLevel(control:GetFrameLevel() + 10)
+		hotspot:SetScript("OnEnter", function(self)
+			showHint(self)
+		end)
+		hotspot:SetScript("OnLeave", function(self)
+			hideHint(self)
+		end)
+		control._speedsterHintHotspot = hotspot
+	end
+end
+
+local function updateHintTooltipState(control)
+	if not control or not control._speedsterHintHotspot then return end
+	local active = control:IsShown() and (not control:IsEnabled()) and (type(control._speedsterHint) == "string") and control._speedsterHint ~= ""
+	control._speedsterHintHotspot:SetShown(active)
+	control._speedsterHintHotspot:EnableMouse(active)
+	if not active and GameTooltip and GameTooltip:IsOwned(control._speedsterHintHotspot) then
+		GameTooltip:Hide()
+	end
+end
+
+local function createSectionHeader(parent, text, anchorFrame, offsetY)
+	local header = parent:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+	header:SetPoint("TOPLEFT", anchorFrame, "BOTTOMLEFT", 0, offsetY or -16)
+	header:SetText(text)
+	return header
+end
+
+local function positionSectionHeader(header, anchorFrame, offsetY)
+	header:ClearAllPoints()
+	header:SetPoint("TOPLEFT", anchorFrame, "BOTTOMLEFT", 0, offsetY or -16)
+end
+
 local function refreshPanel()
 	if not panel._built then return end
 	if not SpeedsterDB then return end
@@ -101,9 +179,57 @@ local function refreshPanel()
 	panel.showMinimapButton:SetChecked(not not SpeedsterDB.show_minimap_button)
 	panel.showFloatingButton:SetChecked(not not SpeedsterDB.show_floating_button)
 	panel.druidTravel:SetChecked(not not SpeedsterDB.druid_use_travel)
+	panel.shamanGhostWolf:SetChecked(not not SpeedsterDB.shaman_use_ghost_wolf)
+	panel.cancelFormOnTaxi:SetChecked(not not SpeedsterDB.cancel_form_on_taxi)
 
 	local _, classFile = UnitClass("player")
-	panel.druidTravel:SetEnabled(classFile == "DRUID")
+	local isDruid = classFile == "DRUID"
+	local isShaman = classFile == "SHAMAN"
+	local showClassSection = isDruid or isShaman
+
+	if showClassSection then
+		panel.classHeader:Show()
+	else
+		panel.classHeader:Hide()
+	end
+	if isDruid then
+		panel.druidTravel:Show()
+	else
+		panel.druidTravel:Hide()
+	end
+	if isShaman then
+		panel.shamanGhostWolf:Show()
+	else
+		panel.shamanGhostWolf:Hide()
+	end
+
+	local behaviorAnchor = panel.enable
+	if showClassSection then
+		if isDruid then
+			local hasTravelOption = isSpellKnownSafe(783) or isSpellKnownSafe(33943) or isSpellKnownSafe(40120)
+			panel.druidTravel:SetEnabled(hasTravelOption)
+			panel.druidTravel._speedsterHint = hasTravelOption and nil or "Unlocks after learning Travel Form."
+			panel.shamanGhostWolf:SetEnabled(false)
+			panel.shamanGhostWolf._speedsterHint = nil
+			behaviorAnchor = panel.druidTravel
+		elseif isShaman then
+			local hasGhostWolf = isSpellKnownSafe(2645)
+			panel.shamanGhostWolf:SetEnabled(hasGhostWolf)
+			panel.shamanGhostWolf._speedsterHint = hasGhostWolf and nil or "Unlocks after learning Ghost Wolf."
+			panel.druidTravel:SetEnabled(false)
+			panel.druidTravel._speedsterHint = nil
+			behaviorAnchor = panel.shamanGhostWolf
+		end
+	else
+		panel.druidTravel:SetEnabled(false)
+		panel.shamanGhostWolf:SetEnabled(false)
+		panel.druidTravel._speedsterHint = nil
+		panel.shamanGhostWolf._speedsterHint = nil
+	end
+	updateHintTooltipState(panel.druidTravel)
+	updateHintTooltipState(panel.shamanGhostWolf)
+
+	positionSectionHeader(panel.behaviorHeader, behaviorAnchor, -14)
 
 	if ns.getBindingText then
 		panel.bindText:SetText("Current keybind: "..ns.getBindingText())
@@ -123,6 +249,7 @@ local function ensureBuilt()
 	if panel._built then return end
 	panel._built = true
 
+	-- Header
 	local title = panel:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
 	title:SetPoint("TOPLEFT", 16, -16)
 	title:SetText("Speedster")
@@ -138,24 +265,53 @@ local function ensureBuilt()
 	subtitle:SetJustifyH("LEFT")
 	subtitle:SetText("Simple speed macro helper.")
 
+	-- Section: General
+	panel.generalHeader = createSectionHeader(panel, "General", subtitle, -20)
+
 	panel.enable = createCheckButton(panel)
-	panel.enable:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", -2, -18)
+	panel.enable:SetPoint("TOPLEFT", panel.generalHeader, "BOTTOMLEFT", -2, -4)
 	panel.enable.Text:SetText("Enable speed macro")
 	panel.enable:SetScript("OnClick", function(btn)
 		SpeedsterDB.enabled = btn:GetChecked() and true or false
 		ns.refreshSpeedButton()
 	end)
 
+	-- Section: Class
+	panel.classHeader = createSectionHeader(panel, "Class", panel.enable, -14)
+
 	panel.druidTravel = createCheckButton(panel)
-	panel.druidTravel:SetPoint("TOPLEFT", panel.enable, "BOTTOMLEFT", 0, -8)
+	panel.druidTravel:SetPoint("TOPLEFT", panel.classHeader, "BOTTOMLEFT", -2, -4)
 	panel.druidTravel.Text:SetText("Druid: use Travel Form outdoors when known")
 	panel.druidTravel:SetScript("OnClick", function(btn)
 		SpeedsterDB.druid_use_travel = btn:GetChecked() and true or false
 		ns.refreshSpeedButton()
 	end)
+	hookHintTooltip(panel.druidTravel)
+
+	panel.shamanGhostWolf = createCheckButton(panel)
+	panel.shamanGhostWolf:SetPoint("TOPLEFT", panel.classHeader, "BOTTOMLEFT", -2, -4)
+	panel.shamanGhostWolf.Text:SetText("Shaman: use Ghost Wolf when known")
+	panel.shamanGhostWolf:SetScript("OnClick", function(btn)
+		SpeedsterDB.shaman_use_ghost_wolf = btn:GetChecked() and true or false
+		ns.refreshSpeedButton()
+	end)
+	hookHintTooltip(panel.shamanGhostWolf)
+
+	-- Section: Behavior
+	panel.behaviorHeader = createSectionHeader(panel, "Behavior", panel.druidTravel, -14)
+
+	panel.cancelFormOnTaxi = createCheckButton(panel)
+	panel.cancelFormOnTaxi:SetPoint("TOPLEFT", panel.behaviorHeader, "BOTTOMLEFT", -2, -4)
+	panel.cancelFormOnTaxi.Text:SetText("Auto-cancel shapeshift form when using a flight master")
+	panel.cancelFormOnTaxi:SetScript("OnClick", function(btn)
+		SpeedsterDB.cancel_form_on_taxi = btn:GetChecked() and true or false
+	end)
+
+	-- Section: Buttons
+	panel.buttonsHeader = createSectionHeader(panel, "Buttons", panel.cancelFormOnTaxi, -14)
 
 	panel.showMinimapButton = createCheckButton(panel)
-	panel.showMinimapButton:SetPoint("TOPLEFT", panel.druidTravel, "BOTTOMLEFT", 0, -8)
+	panel.showMinimapButton:SetPoint("TOPLEFT", panel.buttonsHeader, "BOTTOMLEFT", -2, -4)
 	panel.showMinimapButton.Text:SetText("Show minimap button")
 	panel.showMinimapButton:SetScript("OnClick", function(btn)
 		SpeedsterDB.show_minimap_button = btn:GetChecked() and true or false
@@ -163,7 +319,7 @@ local function ensureBuilt()
 	end)
 
 	panel.showFloatingButton = createCheckButton(panel)
-	panel.showFloatingButton:SetPoint("TOPLEFT", panel.showMinimapButton, "BOTTOMLEFT", 0, -8)
+	panel.showFloatingButton:SetPoint("TOPLEFT", panel.showMinimapButton, "BOTTOMLEFT", 0, -4)
 	panel.showFloatingButton.Text:SetText("Show floating on-screen button")
 	panel.showFloatingButton:SetScript("OnClick", function(btn)
 		SpeedsterDB.show_floating_button = btn:GetChecked() and true or false
@@ -172,7 +328,7 @@ local function ensureBuilt()
 
 	panel.resetFloatingPosButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.resetFloatingPosButton:SetSize(220, 22)
-	panel.resetFloatingPosButton:SetPoint("TOPLEFT", panel.showFloatingButton, "BOTTOMLEFT", 2, -10)
+	panel.resetFloatingPosButton:SetPoint("TOPLEFT", panel.showFloatingButton, "BOTTOMLEFT", 2, -8)
 	panel.resetFloatingPosButton:SetText("Reset Floating Button Position")
 	panel.resetFloatingPosButton:SetScript("OnClick", function()
 		if not ns.resetFloatingButtonPosition then
@@ -187,9 +343,12 @@ local function ensureBuilt()
 		end
 	end)
 
+	-- Section: Keybind
+	local keybindHeader = createSectionHeader(panel, "Keybind", panel.resetFloatingPosButton, -14)
+
 	panel.bindButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
 	panel.bindButton:SetSize(220, 22)
-	panel.bindButton:SetPoint("TOPLEFT", panel.resetFloatingPosButton, "BOTTOMLEFT", 0, -10)
+	panel.bindButton:SetPoint("TOPLEFT", keybindHeader, "BOTTOMLEFT", 0, -8)
 	panel.bindButton:SetText("Bind Key")
 	panel.bindButton:SetScript("OnClick", function()
 		if waitingForBind then
@@ -238,12 +397,13 @@ local function ensureBuilt()
 	end)
 
 	panel.bindText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	panel.bindText:SetPoint("TOPLEFT", panel.bindButton, "BOTTOMLEFT", 0, -10)
+	panel.bindText:SetPoint("TOPLEFT", panel.bindButton, "BOTTOMLEFT", 0, -8)
 	panel.bindText:SetJustifyH("LEFT")
 	panel.bindText:SetText("Current keybind: "..NOT_BOUND)
 
+	-- Current macro
 	panel.macroLabel = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
-	panel.macroLabel:SetPoint("TOPLEFT", panel.bindText, "BOTTOMLEFT", 0, -12)
+	panel.macroLabel:SetPoint("TOPLEFT", panel.bindText, "BOTTOMLEFT", 0, -16)
 	panel.macroLabel:SetJustifyH("LEFT")
 	panel.macroLabel:SetText("Current macro:")
 
