@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.2] - 2026-09-18
+
+### Fixed
+
+- Publish distinct Retail and WoW Forever packages.
+
 ## [0.4.1] - 2026-09-18
 
 ### Added
