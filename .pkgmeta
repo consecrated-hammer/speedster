@@ -1,0 +1,11 @@
+package-as: Speedster
+
+ignore:
+  - .github
+  - .pkgmeta
+  - .gitignore
+  - CHANGELOG.md
+  - DEVELOPMENT.md
+  - media
+  - tools
+  - Speedster_Camelot.toc

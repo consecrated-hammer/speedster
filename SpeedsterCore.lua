@@ -1,6 +1,19 @@
 local addon, ns = ...
 
 local core = CreateFrame("Frame", addon.."Core")
+
+local function addonMetadata(key)
+	local getter = C_AddOns and C_AddOns.GetAddOnMetadata
+	local value = getter and getter(addon, key)
+	if value ~= nil then return value end
+	return GetAddOnMetadata and GetAddOnMetadata(addon, key)
+end
+
+-- The provisional Camelot TOC models Mainline 12.1 restrictions. A player may
+-- still press the normal protected speed button, but automatic taxi-form
+-- cancellation is a programmatic action and stays disabled until proven safe.
+local camelotPreview = addonMetadata("X-Speedster-Target") ~= nil
+ns.camelotPreview = camelotPreview
 ns.core = core
 
 local buttonName = addon.."_SpeedButton"
@@ -11,9 +24,8 @@ local minimapButton
 local floatingButton
 local pendingRefresh
 local pendingFloatingReset
-local MINIMAP_RADIUS = 80
 local FLOATING_BUTTON_SIZE = 36
-local ICON_PATH = "Interface\\AddOns\\Speedster\\textures\\Speedster.png"
+local ICON_PATH = "Interface\\AddOns\\Speedster\\textures\\Speedster.tga"
 local FALLBACK_ICON_PATH = "Interface\\Icons\\INV_Misc_QuestionMark"
 local taxiSecureOverlays = {}
 local warnedTaxiCancelFailure
@@ -133,6 +145,7 @@ local function refreshTaxiSecureOverlays()
 end
 
 local function setupTaxiSecureOverlays()
+	if camelotPreview then return end
 	if not (db and db.cancel_form_on_taxi) then return end
 	if InCombatLockdown and InCombatLockdown() then return end
 
@@ -304,10 +317,20 @@ local function createMinimapButton()
 	border:SetSize(54, 54)
 	border:SetPoint("TOPLEFT")
 
+	local function orbitRadius()
+		local width = Minimap:GetWidth() or 0
+		local height = Minimap:GetHeight() or 0
+		local diameter = math.min(width, height)
+		if diameter <= 0 then return 80 end
+		-- Match Salve's outside-edge orbit at any minimap size or UI scale.
+		return diameter / 2 + minimapButton:GetWidth() / 2 - 10
+	end
+
 	local function setMinimapButtonPosition(angle)
 		local radians = math.rad(angle or 225)
-		local x = math.cos(radians) * MINIMAP_RADIUS
-		local y = math.sin(radians) * MINIMAP_RADIUS
+		local radius = orbitRadius()
+		local x = math.cos(radians) * radius
+		local y = math.sin(radians) * radius
 		minimapButton:ClearAllPoints()
 		minimapButton:SetPoint("CENTER", Minimap, "CENTER", x, y)
 	end
@@ -320,7 +343,8 @@ local function createMinimapButton()
 		local centerX, centerY = Minimap:GetCenter()
 		if not centerX or not centerY then return end
 
-		local angle = math.deg(math.atan(cursorY - centerY, cursorX - centerX))
+		local atan2 = math.atan2 or math.atan
+		local angle = math.deg(atan2(cursorY - centerY, cursorX - centerX))
 		db.minimap_angle = angle
 		setMinimapButtonPosition(angle)
 	end
@@ -357,6 +381,9 @@ local function createMinimapButton()
 	end)
 
 	setMinimapButtonPosition(db.minimap_angle or 225)
+	Minimap:HookScript("OnSizeChanged", function()
+		setMinimapButtonPosition(db.minimap_angle or 225)
+	end)
 end
 
 local function createFloatingButton()
@@ -497,6 +524,17 @@ end
 SLASH_SPEEDSTER1 = "/speedster"
 SlashCmdList["SPEEDSTER"] = ns.openOptions
 
+SLASH_SPEEDSTER_LOADMSG1 = "/speedsterloadmsg"
+SlashCmdList["SPEEDSTER_LOADMSG"] = function(msg)
+	msg = (msg or ""):lower():match("^%s*(.-)%s*$")
+	if msg == "on" or msg == "off" then
+		db.show_startup_message = msg == "on"
+		print("Speedster: load message " .. (db.show_startup_message and "enabled." or "disabled."))
+	else
+		print("Speedster: use /speedsterloadmsg on or off.")
+	end
+end
+
 SLASH_SPEEDSTER_BIND1 = "/speedsterbind"
 SlashCmdList["SPEEDSTER_BIND"] = function(msg)
 	local ok, result = ns.bindKey(msg)
@@ -534,6 +572,7 @@ core:SetScript("OnEvent", function(_, event, ...)
 			show_minimap_button = true,
 			show_floating_button = true,
 			cancel_form_on_taxi = true,
+			show_startup_message = true,
 		}
 		db = SpeedsterDB
 		if db.show_minimap_button == nil then
@@ -548,6 +587,8 @@ core:SetScript("OnEvent", function(_, event, ...)
 		if db.cancel_form_on_taxi == nil then
 			db.cancel_form_on_taxi = true
 		end
+		if db.show_startup_message == nil then db.show_startup_message = true end
+		if camelotPreview then db.cancel_form_on_taxi = false end
 		if db.shaman_use_ghost_wolf == nil then
 			db.shaman_use_ghost_wolf = true
 		end
@@ -559,6 +600,9 @@ core:SetScript("OnEvent", function(_, event, ...)
 		speedButton:Hide()
 		createMinimapButton()
 		createFloatingButton()
+		if db.show_startup_message then
+			print("Speedster: loaded — type /speedster for settings.")
+		end
 
 		_G["BINDING_HEADER_SPEEDSTER"] = "Speedster"
 		_G["BINDING_NAME_"..bindingCommand] = "Use speed macro"
@@ -576,14 +620,17 @@ core:SetScript("OnEvent", function(_, event, ...)
 	or event == "TAXI_SHOW"
 	or event == "GOSSIP_SHOW" then
 		setupTaxiSecureOverlays()
-		cancelShapeshiftForTaxi()
-		if C_Timer and C_Timer.After then
-			C_Timer.After(0, cancelShapeshiftForTaxi)
+		if not camelotPreview then
+			cancelShapeshiftForTaxi()
+			if C_Timer and C_Timer.After then
+				C_Timer.After(0, cancelShapeshiftForTaxi)
+			end
 		end
 	elseif event == "TAXIMAP_CLOSED"
 	or event == "GOSSIP_CLOSED" then
 		hideTaxiSecureOverlays()
 	elseif event == "UI_ERROR_MESSAGE" then
+		if camelotPreview then return end
 		local arg1, arg2 = ...
 		if arg1 == ERR_TAXIPLAYERSHAPESHIFTED or arg2 == ERR_TAXIPLAYERSHAPESHIFTED then
 			cancelShapeshiftForTaxi()

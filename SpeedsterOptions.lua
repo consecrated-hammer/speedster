@@ -304,8 +304,17 @@ local function ensureBuilt()
 	panel.cancelFormOnTaxi:SetPoint("TOPLEFT", panel.behaviorHeader, "BOTTOMLEFT", -2, -4)
 	panel.cancelFormOnTaxi.Text:SetText("Auto-cancel shapeshift form when using a flight master")
 	panel.cancelFormOnTaxi:SetScript("OnClick", function(btn)
+		if ns.camelotPreview then
+		btn:SetChecked(false)
+		return
+		end
 		SpeedsterDB.cancel_form_on_taxi = btn:GetChecked() and true or false
 	end)
+	if ns.camelotPreview then
+		panel.cancelFormOnTaxi:SetChecked(false)
+		panel.cancelFormOnTaxi:SetEnabled(false)
+		panel.cancelFormOnTaxi.Text:SetText("Auto-cancel shapeshift form when using a flight master (unavailable in Forever)")
+	end
 
 	-- Section: Buttons
 	panel.buttonsHeader = createSectionHeader(panel, "Buttons", panel.cancelFormOnTaxi, -14)

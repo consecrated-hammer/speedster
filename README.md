@@ -10,6 +10,7 @@ Originally inspired by MountsJournal, which unfortunately isn't available for TB
 - Updates automatically when you learn new relevant spells/forms.
 - Lets you bind your preferred key from the options panel ("press next key/button" capture).
 - Shows your currently generated macro in the options panel.
+- Optional flight master support can auto-cancel form/dismount so you can select a taxi destination without manual unshifting.
 
 ## Supported Class Speed Abilities
 
@@ -36,7 +37,3 @@ If your class has no supported speed spell available yet, the generated macro wi
 - `/speedster` - Open Speedster options
 - `/speedsterbind [KEY]` - Bind speed macro to a key
 - `/speedstermacro` - Print current generated macro
-
-## Notes
-
-- Macro updates automatically on spell changes.

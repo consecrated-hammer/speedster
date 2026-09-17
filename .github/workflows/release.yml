@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify release metadata
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          toc=$(sed -n 's/^## Version:[[:space:]]*//p' Speedster.toc | tr -d '[:space:]')
+          test "$tag" = "$toc"
+          grep -qE "^## \[$tag\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$" CHANGELOG.md
+          grep -q '^## X-Curse-Project-ID: 1469829$' Speedster.toc
+      - name: Extract release notes
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          awk -v v="$tag" '$0 ~ ("^## \\[" v "\\] - ") { on = 1; next } on && /^## \\[/ { exit } on { print }' CHANGELOG.md > RELEASE_NOTES.md
+          test -s RELEASE_NOTES.md
+      - name: Package and publish
+        uses: BigWigsMods/packager@v2
+        env:
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+      - name: Prepare Forever package
+        run: |
+          rm Speedster.toc
+          mv Speedster_Camelot.toc Speedster.toc
+      - name: Package and publish Forever build
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -n "{package}-{version}-Forever"
+        env:
+          GITHUB_OAUTH: ${{ secrets.GITHUB_TOKEN }}
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
