@@ -1,7 +1,7 @@
 ## Interface: 16001
 ## Title: Speedster (Camelot Retail-Compatibility Preview)
 ## Author: consecratedhammer
-## Version: 0.4.2
+## Version: 0.4.3
 ## IconTexture: Interface\AddOns\Speedster\textures\Speedster.tga
 ## Notes: Provisional Retail-style movement speed macro helper for Camelot.
 ## Category-enUS: Gameplay

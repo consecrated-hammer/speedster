@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.3] - 2026-09-18
+
+### Fixed
+
+- Correct the release-notes extraction guard used by the automated publisher.
+
 ## [0.4.2] - 2026-09-18
 
 ### Fixed

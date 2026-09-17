@@ -24,7 +24,7 @@ jobs:
       - name: Extract release notes
         run: |
           tag="${GITHUB_REF_NAME#v}"
-          awk -v v="$tag" '$0 ~ ("^## \\[" v "\\] - ") { on = 1; next } on && /^## \\[/ { exit } on { print }' CHANGELOG.md > RELEASE_NOTES.md
+          awk -v v="$tag" '$0 ~ ("^## \\[" v "\\] - ") { on = 1; next } on && /^## \[/ { exit } on { print }' CHANGELOG.md > RELEASE_NOTES.md
           test -s RELEASE_NOTES.md
       - name: Package and publish
         uses: BigWigsMods/packager@v2
