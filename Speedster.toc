@@ -1,7 +1,7 @@
 ## Interface: 20505, 11508
 ## Title: Speedster
 ## Author: consecratedhammer
-## Version: 0.4.5
+## Version: 0.4.6
 ## IconTexture: Interface\AddOns\Speedster\textures\Speedster.tga
 ## Notes: Simple movement speed macro helper.
 ## Category-enUS: Gameplay

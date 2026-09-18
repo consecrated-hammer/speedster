@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.6] - 2026-09-18
+
+### Changed
+
+- Present the Camelot flavour as WoW Forever without beta or testing language.
+
 ## [0.4.5] - 2026-09-18
 
 ### Changed
