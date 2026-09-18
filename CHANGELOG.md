@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.4] - 2026-09-18
+
+### Fixed
+
+- Build one Retail and WoW Forever package for CurseForge.
+
 ## [0.4.3] - 2026-09-18
 
 ### Fixed
