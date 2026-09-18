@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.4.8] - 2026-09-18
+
+### Fixed
+
+- Register the Speedster keybinding header once, so the additional action bindings load without a Lua error.
+
 ## [0.4.7] - 2026-09-18
 
 ### Added

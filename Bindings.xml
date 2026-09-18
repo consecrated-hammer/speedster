@@ -1,13 +1,13 @@
 <Bindings>
 	<Binding name="CLICK Speedster_SpeedButton:LeftButton" header="SPEEDSTER">
 	</Binding>
-	<Binding name="CLICK Speedster_SpeedButton_druidDash:LeftButton" header="SPEEDSTER"></Binding>
-	<Binding name="CLICK Speedster_SpeedButton_hunterPack:LeftButton" header="SPEEDSTER"></Binding>
-	<Binding name="CLICK Speedster_SpeedButton_mageSlowFall:LeftButton" header="SPEEDSTER"></Binding>
-	<Binding name="CLICK Speedster_SpeedButton_priestLevitate:LeftButton" header="SPEEDSTER"></Binding>
-	<Binding name="CLICK Speedster_SpeedButton_shamanWaterWalking:LeftButton" header="SPEEDSTER"></Binding>
-	<Binding name="CLICK Speedster_SpeedButton_paladinFreedom:LeftButton" header="SPEEDSTER"></Binding>
-	<Binding name="CLICK Speedster_SpeedButton_gnomeEscapeArtist:LeftButton" header="SPEEDSTER"></Binding>
-	<Binding name="CLICK Speedster_SpeedButton_skyborneWalkOnAir:LeftButton" header="SPEEDSTER"></Binding>
-	<Binding name="CLICK Speedster_SpeedButton_skyborneSkysight:LeftButton" header="SPEEDSTER"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_druidDash:LeftButton"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_hunterPack:LeftButton"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_mageSlowFall:LeftButton"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_priestLevitate:LeftButton"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_shamanWaterWalking:LeftButton"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_paladinFreedom:LeftButton"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_gnomeEscapeArtist:LeftButton"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_skyborneWalkOnAir:LeftButton"></Binding>
+	<Binding name="CLICK Speedster_SpeedButton_skyborneSkysight:LeftButton"></Binding>
 </Bindings>
