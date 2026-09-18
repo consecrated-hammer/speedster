@@ -8,7 +8,8 @@ Originally inspired by MountsJournal, which unfortunately isn't available for TB
 
 - Builds a dynamic movement macro based on your class and known spells.
 - Updates automatically when you learn new relevant spells/forms.
-- Lets you bind your preferred key from the options panel ("press next key/button" capture).
+- Lets you bind your preferred key or mouse button from the options panel ("press next key/button" capture).
+- Exposes separately bindable learned movement, descent, terrain-travel and escape actions.
 - Shows your currently generated macro in the options panel.
 - Optional flight master support can auto-cancel form/dismount so you can select a taxi destination without manual unshifting.
 
@@ -20,6 +21,25 @@ Originally inspired by MountsJournal, which unfortunately isn't available for TB
 - Rogue: Sprint
 - Mage: Blink
 
+## Additional Bindable Actions
+
+When the character knows one of these abilities, it appears in **Additional
+movement actions** in Speedster's options with its own **Bind Key** control.
+No action is bound automatically.
+
+- Druid: Dash
+- Hunter: Aspect of the Pack (shown with its daze warning)
+- Mage: Slow Fall
+- Priest: Levitate
+- Shaman: Water Walking
+- Paladin: Blessing of Freedom (self-cast)
+- Gnome: Escape Artist
+- Skyborne: Walk on Air and, for Windshapers, Skysight
+
+Slow Fall and Levitate consume Light Feathers; Water Walking consumes Fish Oil.
+The normal Speedster key remains independent, so a player can use any desired
+key or mouse button for each available action.
+
 If your class has no supported speed spell available yet, the generated macro will be empty until one is learned.
 
 ## Usage
@@ -27,7 +47,8 @@ If your class has no supported speed spell available yet, the generated macro wi
 1. Open options:
    - `/speedster`
 2. Bind a key:
-   - Click **Bind Key**, then press the key/button you want.
+	   - Click **Bind Key**, then press the key/button you want.
+	   - Use the separate **Bind Key** control beside any learned additional action.
    - Or use `/speedsterbind [KEY]` (empty value defaults to `NUMPADMINUS`).
 3. Inspect generated macro text:
    - `/speedstermacro`

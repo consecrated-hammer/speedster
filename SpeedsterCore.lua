@@ -18,10 +18,22 @@ ns.core = core
 
 local buttonName = addon.."_SpeedButton"
 local bindingCommand = "CLICK "..buttonName..":LeftButton"
+local utilityActions = {
+	{ id = "druidDash", label = "Druid: Dash", spellIDs = { 1850 } },
+	{ id = "hunterPack", label = "Hunter: Aspect of the Pack", spellIDs = { 13159 }, warning = "Group travel only: taking damage dazes affected party members." },
+	{ id = "mageSlowFall", label = "Mage: Slow Fall", spellIDs = { 130 }, warning = "Consumes a Light Feather." },
+	{ id = "priestLevitate", label = "Priest: Levitate", spellIDs = { 1706 }, warning = "Consumes a Light Feather." },
+	{ id = "shamanWaterWalking", label = "Shaman: Water Walking", spellIDs = { 546 }, selfCast = true, warning = "Consumes Fish Oil; damage cancels the effect." },
+	{ id = "paladinFreedom", label = "Paladin: Blessing of Freedom", spellIDs = { 1044 }, selfCast = true },
+	{ id = "gnomeEscapeArtist", label = "Gnome: Escape Artist", spellIDs = { 20589 } },
+	{ id = "skyborneWalkOnAir", label = "Skyborne: Walk on Air", spellIDs = { 1259416 } },
+	{ id = "skyborneSkysight", label = "Skyborne: Skysight", spellIDs = { 1259686 } },
+}
 local db
 local speedButton
 local minimapButton
 local floatingButton
+local utilityButtons = {}
 local pendingRefresh
 local pendingFloatingReset
 local FLOATING_BUTTON_SIZE = 36
@@ -197,6 +209,47 @@ local function getSpellNameIfKnown(spellID)
 		name = GetSpellInfo(spellID)
 	end
 	return name
+end
+
+local function utilityActionFor(spec)
+	for _, spellID in ipairs(spec.spellIDs) do
+		local spellName = getSpellNameIfKnown(spellID)
+		if spellName then
+			local macro = "/cast "
+			if spec.selfCast then macro = macro.."[@player] " end
+			return spellName, macro..spellName
+		end
+	end
+end
+
+function ns.getUtilityActions()
+	local actions = {}
+	for _, spec in ipairs(utilityActions) do
+		local spellName, macro = utilityActionFor(spec)
+		if spellName then
+			actions[#actions + 1] = {
+				id = spec.id,
+				label = spec.label,
+				spellName = spellName,
+				macro = macro,
+				warning = spec.warning,
+				bindingCommand = "CLICK "..buttonName.."_"..spec.id..":LeftButton",
+			}
+		end
+	end
+	return actions
+end
+
+function ns.getUtilityActionIDs()
+	local ids = {}
+	for _, spec in ipairs(utilityActions) do
+		ids[#ids + 1] = spec.id
+	end
+	return ids
+end
+
+function ns.getPrimaryBindingCommand()
+	return bindingCommand
 end
 
 local function buildMacro()
@@ -459,6 +512,13 @@ function ns.refreshSpeedButton()
 	pendingRefresh = nil
 	local macroText = buildMacro()
 	speedButton:SetAttribute("macrotext", macroText)
+	for _, spec in ipairs(utilityActions) do
+		local utilityButton = utilityButtons[spec.id]
+		if utilityButton then
+			local _, utilityMacro = utilityActionFor(spec)
+			utilityButton:SetAttribute("macrotext", utilityMacro or "")
+		end
+	end
 	if floatingButton then
 		floatingButton:SetAttribute("macrotext", macroText)
 		floatingButton:SetShown(not not db.show_floating_button)
@@ -472,7 +532,11 @@ function ns.refreshSpeedButton()
 end
 
 function ns.getBindingText()
-	local key1, key2 = GetBindingKey(bindingCommand)
+	return ns.getActionBindingText(bindingCommand)
+end
+
+function ns.getActionBindingText(command)
+	local key1, key2 = GetBindingKey(command)
 	if key1 and key2 then
 		return ("%s, %s"):format(GetBindingText(key1, "KEY_") or key1, GetBindingText(key2, "KEY_") or key2)
 	elseif key1 then
@@ -481,7 +545,7 @@ function ns.getBindingText()
 	return NOT_BOUND
 end
 
-function ns.bindKey(keyText)
+function ns.bindActionKey(command, keyText)
 	if InCombatLockdown() then
 		return false, SPELL_FAILED_AFFECTING_COMBAT
 	end
@@ -493,12 +557,12 @@ function ns.bindKey(keyText)
 	key = key:upper()
 
 	local oldAction = GetBindingAction(key)
-	local oldKey = GetBindingKey(bindingCommand)
-	if oldAction ~= "" and oldAction ~= bindingCommand then
+	local oldKey = GetBindingKey(command)
+	if oldAction ~= "" and oldAction ~= command then
 		print(("Speedster: '%s' replaced previous binding '%s'."):format(key, GetBindingName(oldAction) or oldAction))
 	end
 
-	if not SetBinding(key, bindingCommand) then
+	if not SetBinding(key, command) then
 		return false, "failed to set binding"
 	end
 
@@ -511,6 +575,10 @@ function ns.bindKey(keyText)
 		ns.refreshOptions()
 	end
 	return true, key
+end
+
+function ns.bindKey(keyText)
+	return ns.bindActionKey(bindingCommand, keyText)
 end
 
 function ns.openOptions()
@@ -598,6 +666,15 @@ core:SetScript("OnEvent", function(_, event, ...)
 		speedButton:SetAttribute("type", "macro")
 		speedButton:SetAttribute("macrotext", "")
 		speedButton:Hide()
+		for _, spec in ipairs(utilityActions) do
+			local utilityButton = CreateFrame("Button", buttonName.."_"..spec.id, UIParent, "SecureActionButtonTemplate")
+			utilityButton:RegisterForClicks("AnyUp", "AnyDown")
+			utilityButton:SetAttribute("type", "macro")
+			utilityButton:SetAttribute("macrotext", "")
+			utilityButton:Hide()
+			utilityButtons[spec.id] = utilityButton
+			_G["BINDING_NAME_CLICK "..buttonName.."_"..spec.id..":LeftButton"] = spec.label
+		end
 		createMinimapButton()
 		createFloatingButton()
 		if db.show_startup_message then

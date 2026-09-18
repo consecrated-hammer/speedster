@@ -5,6 +5,8 @@ panel.name = "Speedster"
 
 local categoryID
 local waitingForBind = false
+local bindTargetCommand
+local bindTargetLabel
 
 local function normalizeBindingKey(key)
 	if key == "LeftButton" then key = "BUTTON1" end
@@ -42,7 +44,13 @@ end
 
 local function stopBindCapture()
 	waitingForBind = false
-	panel.bindButton:SetText("Bind Key")
+	if panel.bindButton then panel.bindButton:SetText("Bind Key") end
+	if panel._activeBindButton and panel._activeBindButton ~= panel.bindButton then
+		panel._activeBindButton:SetText("Bind Key")
+	end
+	panel._activeBindButton = nil
+	bindTargetCommand = nil
+	bindTargetLabel = nil
 	panel.bindCapture:Hide()
 	panel.bindCapture:EnableKeyboard(false)
 	panel.bindCapture:EnableMouse(false)
@@ -69,15 +77,40 @@ local function tryBindCapturedKey(rawKey)
 		return
 	end
 
-	local ok, result = ns.bindKey(bindKey)
+	local command = bindTargetCommand
+	local label = bindTargetLabel or "action"
+	local ok, result = ns.bindActionKey(command, bindKey)
 	if ok then
-		print(("Speedster: bound speed macro to %s."):format(GetBindingText(result, "KEY_") or result))
+		print(("Speedster: bound %s to %s."):format(label, GetBindingText(result, "KEY_") or result))
 	else
 		print(("Speedster: %s"):format(result))
 	end
 	stopBindCapture()
 	if ns.refreshOptions then
 		ns.refreshOptions()
+	end
+end
+
+local function startBindCapture(button, command, label)
+	if waitingForBind then
+		stopBindCapture()
+	end
+	waitingForBind = true
+	bindTargetCommand = command
+	bindTargetLabel = label
+	panel._activeBindButton = button
+	button:SetText("Press a key... (Esc to cancel)")
+	panel.bindCapture:Show()
+	panel.bindCapture:EnableKeyboard(true)
+	panel.bindCapture:EnableMouse(true)
+	if panel.bindCapture.SetPropagateKeyboardInput then
+		panel.bindCapture:SetPropagateKeyboardInput(false)
+	end
+	if panel.bindCapture.SetPropagateMouseClicks then
+		panel.bindCapture:SetPropagateMouseClicks(false)
+	end
+	if panel.bindCapture.SetPropagateMouseMotion then
+		panel.bindCapture:SetPropagateMouseMotion(false)
 	end
 end
 
@@ -235,6 +268,32 @@ local function refreshPanel()
 		panel.bindText:SetText("Current keybind: "..ns.getBindingText())
 	end
 
+	local actions = ns.getUtilityActions and ns.getUtilityActions() or {}
+	local visible = 0
+	for _, row in ipairs(panel.utilityRows or {}) do
+		row:Hide()
+	end
+	for _, action in ipairs(actions) do
+		local row = panel.utilityRowsByID[action.id]
+		if row then
+			visible = visible + 1
+			row:ClearAllPoints()
+			row:SetPoint("TOPLEFT", panel.utilityHeader, "BOTTOMLEFT", 0, -8 - ((visible - 1) * 48))
+			row.label:SetText(action.label)
+			row.keyText:SetText("Key: "..ns.getActionBindingText(action.bindingCommand))
+			row.warning:SetText(action.warning or "")
+			row.bindCommand = action.bindingCommand
+			row.bindLabel = action.label
+			row:Show()
+		end
+	end
+	panel.utilityHeader:Show()
+	if visible == 0 then
+		panel.utilityNone:Show()
+	else
+		panel.utilityNone:Hide()
+	end
+
 	if ns.getMacro then
 		local macro = ns.getMacro()
 		if macro == "" then
@@ -360,24 +419,7 @@ local function ensureBuilt()
 	panel.bindButton:SetPoint("TOPLEFT", keybindHeader, "BOTTOMLEFT", 0, -8)
 	panel.bindButton:SetText("Bind Key")
 	panel.bindButton:SetScript("OnClick", function()
-		if waitingForBind then
-			stopBindCapture()
-			return
-		end
-		waitingForBind = true
-		panel.bindButton:SetText("Press a key... (Esc to cancel)")
-		panel.bindCapture:Show()
-		panel.bindCapture:EnableKeyboard(true)
-		panel.bindCapture:EnableMouse(true)
-		if panel.bindCapture.SetPropagateKeyboardInput then
-			panel.bindCapture:SetPropagateKeyboardInput(false)
-		end
-		if panel.bindCapture.SetPropagateMouseClicks then
-			panel.bindCapture:SetPropagateMouseClicks(false)
-		end
-		if panel.bindCapture.SetPropagateMouseMotion then
-			panel.bindCapture:SetPropagateMouseMotion(false)
-		end
+		startBindCapture(panel.bindButton, ns.getPrimaryBindingCommand(), "speed macro")
 	end)
 
 	panel.bindCapture = CreateFrame("Frame", nil, panel)
@@ -434,6 +476,37 @@ local function ensureBuilt()
 		.."/speedsterbind [KEY] - Bind speed macro to key (blank = NUMPADMINUS)\n"
 		.."/speedstermacro - Print current generated macro"
 	)
+
+	panel.utilityHeader = createSectionHeader(panel, "Additional movement actions", panel.help, -18)
+	panel.utilityNone = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+	panel.utilityNone:SetPoint("TOPLEFT", panel.utilityHeader, "BOTTOMLEFT", 0, -8)
+	panel.utilityNone:SetText("Additional actions appear here after this character learns them.")
+	panel.utilityRows = {}
+	panel.utilityRowsByID = {}
+	for _, id in ipairs(ns.getUtilityActionIDs()) do
+		local row = CreateFrame("Frame", nil, panel)
+		row:SetSize(520, 44)
+		row.label = row:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+		row.label:SetPoint("TOPLEFT", 0, 0)
+		row.label:SetJustifyH("LEFT")
+		row.bindButton = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
+		row.bindButton:SetSize(92, 20)
+		row.bindButton:SetPoint("TOPRIGHT", 0, 0)
+		row.bindButton:SetText("Bind Key")
+		row.bindButton:SetScript("OnClick", function()
+			startBindCapture(row.bindButton, row.bindCommand, row.bindLabel)
+		end)
+		row.keyText = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+		row.keyText:SetPoint("TOPRIGHT", row.bindButton, "BOTTOMLEFT", 0, -2)
+		row.keyText:SetJustifyH("RIGHT")
+		row.warning = row:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+		row.warning:SetPoint("TOPLEFT", row.label, "BOTTOMLEFT", 0, -3)
+		row.warning:SetPoint("RIGHT", row.keyText, "LEFT", -8, 0)
+		row.warning:SetJustifyH("LEFT")
+		row:Hide()
+		panel.utilityRows[#panel.utilityRows + 1] = row
+		panel.utilityRowsByID[id] = row
+	end
 end
 
 panel:SetScript("OnShow", function()

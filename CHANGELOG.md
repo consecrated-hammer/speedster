@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.7] - 2026-09-18
+
+### Added
+
+- Individually bindable learned movement, emergency-descent, terrain-travel and
+  movement-escape actions, including Skyborne abilities.
+
 ## [0.4.6] - 2026-09-18
 
 ### Changed
