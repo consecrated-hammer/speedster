@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.10] - 2026-09-19
+
+### Fixed
+
+- Declare Retail's current interface alongside the supported Classic and WoW
+  Forever interfaces, so CurseForge correctly lists the unified package for
+  Retail and Forever.
+
 ## [0.4.9] - 2026-09-19
 
 ### Fixed
