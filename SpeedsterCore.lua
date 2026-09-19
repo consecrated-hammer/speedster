@@ -8,6 +8,7 @@ local function addonMetadata(key)
 	if value ~= nil then return value end
 	return GetAddOnMetadata and GetAddOnMetadata(addon, key)
 end
+ns.addonMetadata = addonMetadata
 
 -- The provisional Camelot TOC models Mainline 12.1 restrictions. A player may
 -- still press the normal protected speed button, but automatic taxi-form
@@ -524,7 +525,14 @@ function ns.refreshSpeedButton()
 		floatingButton:SetShown(not not db.show_floating_button)
 	end
 	if minimapButton then
-		minimapButton:SetShown(not not db.show_minimap_button)
+		-- MinimapButtonBag and similar collectors hook Show/Hide to keep their
+		-- managed buttons collapsed. SetShown bypasses those hooks and would
+		-- let a routine macro refresh restore this icon onto the minimap.
+		if db.show_minimap_button then
+			minimapButton:Show()
+		else
+			minimapButton:Hide()
+		end
 	end
 	if ns.refreshOptions then
 		ns.refreshOptions()
@@ -590,7 +598,15 @@ function ns.openOptions()
 end
 
 SLASH_SPEEDSTER1 = "/speedster"
-SlashCmdList["SPEEDSTER"] = ns.openOptions
+SlashCmdList["SPEEDSTER"] = function(message)
+	local command = (message or ""):lower():match("^%s*(.-)%s*$")
+	if command == "debug" or command == "diagnostics" then
+		if ns.ShowDiagnosticReport then ns.ShowDiagnosticReport()
+		else print("Speedster: diagnostics are not ready yet.") end
+	else
+		ns.openOptions()
+	end
+end
 
 SLASH_SPEEDSTER_LOADMSG1 = "/speedsterloadmsg"
 SlashCmdList["SPEEDSTER_LOADMSG"] = function(msg)
@@ -629,6 +645,7 @@ core:SetScript("OnEvent", function(_, event, ...)
 		local addonName = ...
 		if addonName ~= addon then return end
 
+		ns.dbWasFresh = type(SpeedsterDB) ~= "table"
 		if type(SpeedsterDB) ~= "table" then
 			SpeedsterDB = nil
 		end
@@ -643,6 +660,7 @@ core:SetScript("OnEvent", function(_, event, ...)
 			show_startup_message = true,
 		}
 		db = SpeedsterDB
+		ns.db = db
 		if db.show_minimap_button == nil then
 			db.show_minimap_button = true
 		end

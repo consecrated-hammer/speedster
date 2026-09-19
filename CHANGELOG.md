@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.9] - 2026-09-19
+
+### Fixed
+
+- Let minimap-button collectors such as MinimapButtonBag retain Speedster's
+  icon in their collapsed menu after routine macro refreshes.
+
+### Added
+
+- Add a copyable troubleshooting report and compatible early SavedVariables
+  loading for Retail and WoW Forever.
+
 ## [0.4.8] - 2026-09-18
 
 ### Fixed

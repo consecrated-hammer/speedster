@@ -1,15 +1,17 @@
 ## Interface: 16001
 ## Title: Speedster (WoW Forever)
 ## Author: consecratedhammer
-## Version: 0.4.8
+## Version: 0.4.9
 ## IconTexture: Interface\AddOns\Speedster\textures\Speedster.tga
 ## Notes: WoW Forever (Camelot) build using Speedster's Mainline backend.
 ## AllowLoadGameType: camelot
 ## X-Curse-Project-ID: 1469829
 ## X-Speedster-Target: Camelot
 ## SavedVariablesPerCharacter: SpeedsterDB
+## LoadSavedVariablesFirst: 1
 
 # This build uses Speedster's existing protected-button and combat-deferral
 # implementation.
 SpeedsterCore.lua
+SpeedsterDiagnostics.lua
 SpeedsterOptions.lua

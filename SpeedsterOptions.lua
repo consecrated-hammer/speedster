@@ -473,11 +473,20 @@ local function ensureBuilt()
 	panel.help:SetText(
 		"Click 'Bind Key', then press your next key/button.\n"
 		.."/speedster - Open Speedster options\n"
+		.."/speedster debug - Open a copyable diagnostic report\n"
 		.."/speedsterbind [KEY] - Bind speed macro to key (blank = NUMPADMINUS)\n"
 		.."/speedstermacro - Print current generated macro"
 	)
 
-	panel.utilityHeader = createSectionHeader(panel, "Additional movement actions", panel.help, -18)
+	panel.diagnosticsButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+	panel.diagnosticsButton:SetSize(220, 22)
+	panel.diagnosticsButton:SetPoint("TOPLEFT", panel.help, "BOTTOMLEFT", 0, -10)
+	panel.diagnosticsButton:SetText("Copy Troubleshooting Report")
+	panel.diagnosticsButton:SetScript("OnClick", function()
+		if ns.ShowDiagnosticReport then ns.ShowDiagnosticReport() end
+	end)
+
+	panel.utilityHeader = createSectionHeader(panel, "Additional movement actions", panel.diagnosticsButton, -18)
 	panel.utilityNone = panel:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	panel.utilityNone:SetPoint("TOPLEFT", panel.utilityHeader, "BOTTOMLEFT", 0, -8)
 	panel.utilityNone:SetText("Additional actions appear here after this character learns them.")

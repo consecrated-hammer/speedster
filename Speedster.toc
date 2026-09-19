@@ -1,10 +1,12 @@
 ## Interface: 20505, 11508
 ## Title: Speedster
 ## Author: consecratedhammer
-## Version: 0.4.8
+## Version: 0.4.9
 ## IconTexture: Interface\AddOns\Speedster\textures\Speedster.tga
 ## Notes: Simple movement speed macro helper.
 ## X-Curse-Project-ID: 1469829
 ## SavedVariablesPerCharacter: SpeedsterDB
+## LoadSavedVariablesFirst: 1
 SpeedsterCore.lua
+SpeedsterDiagnostics.lua
 SpeedsterOptions.lua
